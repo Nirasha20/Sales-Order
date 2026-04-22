@@ -4,6 +4,8 @@ namespace SalesOrderAPI.Domain.Entities
     {
         public int DetailId { get; set; }
         public int OrderId { get; set; }
+        [System.Text.Json.Serialization.JsonIgnore]
+        public SalesOrder? SalesOrder { get; set; }
         public int ItemId { get; set; }
         public Item? Item { get; set; }
         public string Note { get; set; } = string.Empty;
