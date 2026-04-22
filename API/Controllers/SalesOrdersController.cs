@@ -74,5 +74,79 @@ namespace SalesOrderAPI.API.Controllers
             await _db.SaveChangesAsync();
             return Ok(existing);
         }
+
+        // TEST endpoint - Insert sample data to verify MySQL connection
+        [HttpPost("test-data")]
+        public async Task<IActionResult> InsertTestData()
+        {
+            try
+            {
+                // Check if test data already exists
+                var existingClient = await _db.Clients.FirstOrDefaultAsync(c => c.CustomerName == "Test Client");
+                if (existingClient != null)
+                    return BadRequest("Test data already exists");
+
+                // Create test client
+                var client = new Client { CustomerName = "Test Client", Address1 = "123 Test St", City = "Test City", State = "TS", PostCode = "12345" };
+                _db.Clients.Add(client);
+                await _db.SaveChangesAsync();
+
+                // Create test item
+                var item = new Item { ItemCode = "TEST001", Description = "Test Item", Price = 100.00m };
+                _db.Items.Add(item);
+                await _db.SaveChangesAsync();
+
+                // Create test order
+                var order = new SalesOrder
+                {
+                    ClientId = client.ClientId,
+                    InvoiceNo = "INV-TEST-001",
+                    InvoiceDate = DateTime.Now,
+                    ReferenceNo = "REF001",
+                    TotalExcl = 100.00m,
+                    TotalTax = 10.00m,
+                    TotalIncl = 110.00m,
+                    CreatedAt = DateTime.Now,
+                    OrderDetails = new List<OrderDetail>
+                    {
+                        new OrderDetail { ItemId = item.ItemId, Quantity = 1, Price = 100.00m, ExclAmount = 100.00m, TaxAmount = 10.00m, InclAmount = 110.00m }
+                    }
+                };
+                _db.SalesOrders.Add(order);
+                await _db.SaveChangesAsync();
+
+                return Ok(new { message = "Test data inserted successfully", clientId = client.ClientId, orderId = order.OrderId });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = ex.Message, innerError = ex.InnerException?.Message });
+            }
+        }
+
+        // TEST endpoint - Verify data in database
+        [HttpGet("verify-data")]
+        public async Task<IActionResult> VerifyData()
+        {
+            try
+            {
+                var clientCount = await _db.Clients.CountAsync();
+                var itemCount = await _db.Items.CountAsync();
+                var orderCount = await _db.SalesOrders.CountAsync();
+
+                return Ok(new
+                {
+                    status = "Connected to MySQL",
+                    clientsCount = clientCount,
+                    itemsCount = itemCount,
+                    ordersCount = orderCount,
+                    sampleClients = await _db.Clients.Take(5).ToListAsync(),
+                    sampleOrders = await _db.SalesOrders.Include(o => o.Client).Take(5).ToListAsync()
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { error = "Database connection failed", message = ex.Message });
+            }
+        }
     }
 }
